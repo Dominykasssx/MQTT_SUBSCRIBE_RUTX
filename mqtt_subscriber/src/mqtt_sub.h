@@ -1,1 +1,1 @@
-int mqttTest(struct arguments args);
+int mqttService(struct arguments args, struct topic topics);

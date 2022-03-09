@@ -33,7 +33,6 @@ void on_connect(struct mosquitto *mosq, void *obj, int reason_code)
 	}
 }
 
-
 /* Callback called when the broker sends a SUBACK in response to a SUBSCRIBE. */
 void on_subscribe(struct mosquitto *mosq, void *obj, int mid, int qos_count, const int *granted_qos)
 {
@@ -57,7 +56,6 @@ void on_subscribe(struct mosquitto *mosq, void *obj, int mid, int qos_count, con
 	}
 }
 
-
 /* Callback called when the client receives a message. */
 void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_message *msg)
 {
@@ -65,8 +63,7 @@ void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_messag
 	printf("%s %d %s\n", msg->topic, msg->qos, (char *)msg->payload);
 }
 
-
-int mqttService(struct arguments args)
+int mqttService(struct arguments args, struct topic topics)
 {
 	struct mosquitto *mosq;
 	int rc;
@@ -89,7 +86,6 @@ int mqttService(struct arguments args)
 	mosquitto_connect_callback_set(mosq, on_connect);
 	mosquitto_subscribe_callback_set(mosq, on_subscribe);
 	mosquitto_message_callback_set(mosq, on_message);
-
 
 	/* This call makes the socket connection only, it does not complete the MQTT
 	 * CONNECT/CONNACK flow, you should use mosquitto_loop_start() or

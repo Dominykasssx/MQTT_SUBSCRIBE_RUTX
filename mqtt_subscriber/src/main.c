@@ -69,20 +69,20 @@ int main(int argc, char *argv[])
     struct arguments arguments;
     struct topic topics;
     int tCount = -1;
-    int maxCount = 3;
     
 	arguments_init(&arguments);
 
-	argp_parse(&argp, argc, argv, 0, 0, &arguments);
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
+    //metodas kažkur klaidą išmeta turbūt.
+    int rc = uci_read_topics(&topics, &tCount);
 
-    uci_read_topics(&topics, &tCount, &maxCount);
-
-
-
+    if (rc == 0){
+    syslog(LOG_DEBUG, "Success");
+    }
 
     syslog(LOG_INFO, "MQTT TEST STARTED");
-    mqttService(arguments);
+    mqttService(arguments, topics);
     syslog(LOG_INFO, "MQTT TEST ENDED");
 
 end:
