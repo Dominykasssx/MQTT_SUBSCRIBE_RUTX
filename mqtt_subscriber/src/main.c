@@ -39,7 +39,7 @@ void unlock(int *fd)
         exit(1);
     }
     close(*fd);
-}topics
+}
 
 void usage(void) 
 {
