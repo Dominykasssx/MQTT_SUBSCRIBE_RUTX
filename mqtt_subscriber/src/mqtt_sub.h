@@ -1,1 +1,1 @@
-int mqttService(struct arguments args, struct topic topics);
+int mqttService(struct arguments args, struct topic *topics, int tCount, int *interrupt);

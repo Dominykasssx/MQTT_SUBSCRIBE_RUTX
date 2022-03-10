@@ -50,8 +50,8 @@ int uci_get_option(const char* option_path, char **out_str)
         rc = 1;
         goto free_ptr;
     }
-
-    uci_show_value(ptr.o);
+    //Method to show topics from uci
+    //uci_show_value(ptr.o);
 
     switch(ptr.o->type) {
 
@@ -74,14 +74,14 @@ free_ptr:
     return rc;
 }
 
-int uci_read_topics(struct topic *topics, int *tCount)
+int uci_read_topics(struct topic *topics, int *tCount, int maxTopics)
 {
     int rc = 0;
     int count = 0;
 
     char buffer[255];
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < maxTopics; i++) {
 
         char* topic;
         char* qos;
@@ -97,7 +97,6 @@ int uci_read_topics(struct topic *topics, int *tCount)
             rc = 1;
             break;
         }
-
 
         snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@mqttsubscribe_topic", i, "qos");
         rc = uci_get_option(buffer, &qos);

@@ -13,8 +13,9 @@
 #include "mqtt_sub.h"
 #include "topics_read.h"
 
-
 #define LOCKFILE "/var/lock/mqtt_subscriber.lock"
+
+int interrupt = 0;
 char *configFilePath = NULL;
 char *progname = "main";
 
@@ -47,6 +48,14 @@ void usage(void)
     exit(1);
 }
 
+void sigHandler(int signo)
+{
+    signal(SIGINT, NULL);
+    fprintf(stdout, "Received signal: %d\n", signo);
+    interrupt = 1;
+}
+
+
 static struct argp argp = {options, parse_opt, args_doc, doc};
 
 int main(int argc, char *argv[])
@@ -66,24 +75,30 @@ int main(int argc, char *argv[])
       syslog(LOG_INFO, "Program locked successfully");
     }
 
+    signal(SIGINT, sigHandler);
+    signal(SIGTERM, sigHandler);
+
     struct arguments arguments;
-    struct topic topics;
+    struct topic topics[100];
     int tCount = -1;
     
 	arguments_init(&arguments);
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    //metodas kažkur klaidą išmeta turbūt.
-    int rc = uci_read_topics(&topics, &tCount);
+    int rc = uci_read_topics(topics, &tCount,100);
 
     if (rc == 0){
-    syslog(LOG_DEBUG, "Success");
+    syslog(LOG_DEBUG, "Successfully readed topics from uci");
+    }
+    else{
+        ret = 1;
+        goto end;
     }
 
-    syslog(LOG_INFO, "MQTT TEST STARTED");
-    mqttService(arguments, topics);
-    syslog(LOG_INFO, "MQTT TEST ENDED");
+    syslog(LOG_DEBUG, "MQTT SERVICE STARTED");
+    mqttService(arguments, topics, tCount, &interrupt);
+    syslog(LOG_DEBUG, "MQTT SERVICE ENDED");
 
 end:
     closelog();

@@ -4,66 +4,46 @@
 #include <string.h>
 #include <unistd.h>
 #include "struct.h"
+#include <syslog.h>
 
 
 /* Callback called when the client receives a CONNACK message from the broker. */
 void on_connect(struct mosquitto *mosq, void *obj, int reason_code)
 {
-	int rc;
-	/* Print out the connection result. mosquitto_connack_string() produces an
-	 * appropriate string for MQTT v3.x clients, the equivalent for MQTT v5.0
-	 * clients is mosquitto_reason_string().
-	 */
-	printf("on_connect: %s\n", mosquitto_connack_string(reason_code));
-	if(reason_code != 0){
-		/* If the connection fails for any reason, we don't want to keep on
-		 * retrying in this example, so disconnect. Without this, the client
-		 * will attempt to reconnect. */
-		mosquitto_disconnect(mosq);
+	if (reason_code == 0){
+	fprintf(stdout, "Connection established\n");
 	}
-
-	/* Making subscriptions in the on_connect() callback means that if the
-	 * connection drops and is automatically resumed by the client, then the
-	 * subscriptions will be recreated when the client reconnects. */
-	rc = mosquitto_subscribe(mosq, NULL, "example/temperature", 1);
-	if(rc != MOSQ_ERR_SUCCESS){
-		fprintf(stderr, "Error subscribing: %s\n", mosquitto_strerror(rc));
-		/* We might as well disconnect if we were unable to subscribe */
-		mosquitto_disconnect(mosq);
+	else{
+		fprintf(stdout, "Can't establish connection\n");
 	}
 }
 
 /* Callback called when the broker sends a SUBACK in response to a SUBSCRIBE. */
-void on_subscribe(struct mosquitto *mosq, void *obj, int mid, int qos_count, const int *granted_qos)
+static int subscribe(struct mosquitto *mosq, struct topic *topics, int topics_count)
 {
-	int i;
-	bool have_subscription = false;
-
-	/* In this example we only subscribe to a single topic at once, but a
-	 * SUBSCRIBE can contain many topics at once, so this is one way to check
-	 * them all. */
-	for(i=0; i<qos_count; i++){
-		printf("on_subscribe: %d:granted qos = %d\n", i, granted_qos[i]);
-		if(granted_qos[i] <= 2){
-			have_subscription = true;
+    int rc = 0;
+    for (int i = 0; i < topics_count; i++) {
+        
+        rc = mosquitto_subscribe(mosq, NULL, topics[i].topic, topics[i].qos);
+        if (rc) {
+            fprintf(stderr, "Failed to subscribe to topic \"%s\"\n", topics[i]);
+            break;
+        }
+		else{
+			fprintf(stdout, "Topic %s subscribed successfully\n", topics[i]);
 		}
-	}
-	if(have_subscription == false){
-		/* The broker rejected all of our subscriptions, we know we only sent
-		 * the one SUBSCRIBE, so there is no point remaining connected. */
-		fprintf(stderr, "Error: All subscriptions rejected.\n");
-		mosquitto_disconnect(mosq);
-	}
+    }
+    return rc;
 }
 
 /* Callback called when the client receives a message. */
 void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_message *msg)
 {
 	/* This blindly prints the payload, but the payload can be anything so take care. */
-	printf("%s %d %s\n", msg->topic, msg->qos, (char *)msg->payload);
+	fprintf(stdout, "From topic |%s| got message: |%s| qos: |%d|\n", msg->topic, (char *)msg->payload, msg->qos);
 }
 
-int mqttService(struct arguments args, struct topic topics)
+int mqttService(struct arguments args, struct topic *topics, int tCount, int *interrupt)
 {
 	struct mosquitto *mosq;
 	int rc;
@@ -84,7 +64,6 @@ int mqttService(struct arguments args, struct topic topics)
 
 	/* Configure callbacks. This should be done before connecting ideally. */
 	mosquitto_connect_callback_set(mosq, on_connect);
-	mosquitto_subscribe_callback_set(mosq, on_subscribe);
 	mosquitto_message_callback_set(mosq, on_message);
 
 	/* This call makes the socket connection only, it does not complete the MQTT
@@ -97,13 +76,18 @@ int mqttService(struct arguments args, struct topic topics)
 		return 1;
 	}
 
-	/* Run the network loop in a blocking call. The only thing we do in this
-	 * example is to print incoming messages, so a blocking call here is fine.
-	 *
-	 * This call will continue forever, carrying automatic reconnections if
-	 * necessary, until the user calls mosquitto_disconnect().
-	 */
-	mosquitto_loop_forever(mosq, -1, 1);
+	subscribe(mosq, topics, tCount);
+
+
+	mosquitto_loop_start(mosq);
+	while (*interrupt == 0) {
+        fflush(stdout);
+    }
+	if(*interrupt == 1)
+	{
+		mosquitto_loop_stop(mosq, true);
+		syslog(LOG_INFO, "MQTT connection lost");
+	}
 
 	mosquitto_lib_cleanup();
 	return 0;
