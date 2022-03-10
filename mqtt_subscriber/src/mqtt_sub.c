@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "struct.h"
 #include <syslog.h>
+#include "logger.h"
 
 
 /* Callback called when the client receives a CONNACK message from the broker. */
@@ -39,14 +40,28 @@ static int subscribe(struct mosquitto *mosq, struct topic *topics, int topics_co
 /* Callback called when the client receives a message. */
 void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_message *msg)
 {
-	/* This blindly prints the payload, but the payload can be anything so take care. */
+ 	int rc1  = saveLog(msg->topic, (char *)msg->payload);
+	if(rc1 == 1){
+    printf("Message was not logged\n");
+    }
+    else{
+        printf("Message logged\n");
+    }
 	fprintf(stdout, "From topic |%s| got message: |%s| qos: |%d|\n", msg->topic, (char *)msg->payload, msg->qos);
 }
 
 int mqttService(struct arguments args, struct topic *topics, int tCount, int *interrupt)
 {
+	int rc = openDatabase("Mqtt_subscriber");
+    if (rc == 0){
+    printf("OPENED DATABASE\n");
+    }
+    else{
+    printf("ERROR OPENING DATABASE\n");
+    return 1;
+    }
+
 	struct mosquitto *mosq;
-	int rc;
 
 	/* Required before calling other mosquitto functions */
 	mosquitto_lib_init();
@@ -62,13 +77,11 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 		return 1;
 	}
 
-	/* Configure callbacks. This should be done before connecting ideally. */
+	/* Configure callbacks. */
 	mosquitto_connect_callback_set(mosq, on_connect);
 	mosquitto_message_callback_set(mosq, on_message);
 
-	/* This call makes the socket connection only, it does not complete the MQTT
-	 * CONNECT/CONNACK flow, you should use mosquitto_loop_start() or
-	 * mosquitto_loop_forever() for processing net traffic. */
+
 	rc = mosquitto_connect(mosq, args.brokerIp, args.brokerPort, 60);
 	if(rc != MOSQ_ERR_SUCCESS){
 		mosquitto_destroy(mosq);
@@ -83,10 +96,17 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 	while (*interrupt == 0) {
         fflush(stdout);
     }
-	if(*interrupt == 1)
-	{
+	if(*interrupt == 1){
 		mosquitto_loop_stop(mosq, true);
 		syslog(LOG_INFO, "MQTT connection lost");
+		 rc =closeDatabase();
+    	if (rc == 0){
+    	printf("CLOSED DATABASE\n");
+    	}
+    	else{
+    	printf("ERROR CLOSING DATABASE\n");
+    	return 1;
+    }
 	}
 
 	mosquitto_lib_cleanup();

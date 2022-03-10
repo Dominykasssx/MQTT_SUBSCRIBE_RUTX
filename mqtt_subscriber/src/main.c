@@ -12,6 +12,7 @@
 #include "arguments_parse.h"
 #include "mqtt_sub.h"
 #include "topics_read.h"
+#include "logger.h"
 
 #define LOCKFILE "/var/lock/mqtt_subscriber.lock"
 
@@ -74,6 +75,7 @@ int main(int argc, char *argv[])
     else{
       syslog(LOG_INFO, "Program locked successfully");
     }
+
 
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
