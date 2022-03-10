@@ -7,6 +7,8 @@ void arguments_init(struct arguments *arguments)
     arguments->use_tls = "";
     arguments->brokerIp = "";
     arguments->brokerPort = "";
+    arguments->username = "";
+    arguments->password = "";
 }
 
 error_t parse_opt (int key, char *arg, struct argp_state *state)
@@ -22,6 +24,12 @@ error_t parse_opt (int key, char *arg, struct argp_state *state)
       break;
 	  case 'p':
       arguments->brokerPort = atoi(arg);
+      break;
+    case 'u':
+      arguments->username = arg;
+      break;
+    case 's':
+      arguments->password = arg;
       break;
 
     case ARGP_KEY_ARG:

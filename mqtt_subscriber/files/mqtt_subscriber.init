@@ -10,10 +10,17 @@ start_service() {
 		config_get use_tls config 'use_tls' '0'
 		config_get brokerIp config 'brokerIp' ''
 		config_get brokerPort config 'brokerPort' ''
+		config_get username config 'username' ''
+		config_get password config 'password' ''
 
 	if [ "$enabled" -eq 1 ]; then
 	        procd_open_instance
-	        procd_set_param command /usr/bin/mqtt_subscriber -t "$use_tls" -b "$brokerIp" -p "$brokerPort"
+
+		if [ "$use_tls" -eq 1 ]; then
+			procd_set_param command /usr/bin/mqtt_subscriber -t "$use_tls" -b "$brokerIp" -p "$brokerPort" -u "$username" -s "$password"
+		else
+			procd_set_param command /usr/bin/mqtt_subscriber -b "$brokerIp" -p "$brokerPort" -u "$username" -s "$password"
+		fi
 	        procd_set_param pidfile /var/run/mqtt_subscriber.pid
 			procd_set_param file /etc/config/mqtt_subscriber
 			procd_set_param stdout 1

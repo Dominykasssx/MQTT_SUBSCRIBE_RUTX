@@ -81,6 +81,17 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 	mosquitto_connect_callback_set(mosq, on_connect);
 	mosquitto_message_callback_set(mosq, on_message);
 
+	    if (strlen(args.username) != 0 && strlen(args.password) != 0) {
+        rc = mosquitto_username_pw_set(mosq, args.username, args.password);
+        if (rc != MOSQ_ERR_SUCCESS) {
+            fprintf(stderr, "Could not set username and password\n");
+            return 1;
+        }
+		else{
+			fprintf(stderr, "Successfully set username and password\n");
+		}
+    }
+
 
 	rc = mosquitto_connect(mosq, args.brokerIp, args.brokerPort, 60);
 	if(rc != MOSQ_ERR_SUCCESS){
