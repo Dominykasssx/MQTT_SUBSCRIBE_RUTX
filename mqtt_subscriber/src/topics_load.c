@@ -74,7 +74,7 @@ free_ptr:
     return rc;
 }
 
-int uci_read_topics(struct topic *topics, int *tCount, int maxTopics)
+int uci_load_topics(struct topic *topics, int *tCount, int maxTopics)
 {
     int rc = 0;
     int count = 0;
@@ -86,7 +86,7 @@ int uci_read_topics(struct topic *topics, int *tCount, int maxTopics)
         char* topic;
         char* qos;
 
-        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@mqttsubscribe_topic", i, "topic");
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@topic", i, "topic");
         rc = uci_get_option(buffer, &topic);
         if (rc == 1) { 
             rc = 0;
@@ -98,7 +98,7 @@ int uci_read_topics(struct topic *topics, int *tCount, int maxTopics)
             break;
         }
 
-        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@mqttsubscribe_topic", i, "qos");
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@topic", i, "qos");
         rc = uci_get_option(buffer, &qos);
         if (rc) {
             break;

@@ -7,6 +7,7 @@ static struct argp_option options[] = {
     {"brokerPort", 'p', "PORT", 0, "Broker port adress"},
     {"username", 'u', "USERNAME", 0, "Login to broker username"},
     {"password", 's', "PASSWORD", 0, "Login to broke password"},
+    {"certificate", 'c', "CERTIFICATE", 0, "Certificate to use TLS"},
     {0}};
 
 

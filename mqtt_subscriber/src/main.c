@@ -11,7 +11,7 @@
 #include <sys/file.h>
 #include "arguments_parse.h"
 #include "mqtt_sub.h"
-#include "topics_read.h"
+#include "topics_load.h"
 #include "logger.h"
 
 #define LOCKFILE "/var/lock/mqtt_subscriber.lock"
@@ -68,12 +68,9 @@ int main(int argc, char *argv[])
     int rrc = isLocked(&fd);
 
     if (rrc != 0){
-      syslog(LOG_ERR, "Program is already locked");
+      syslog(LOG_ERR, "Program is launched from another daemon");
       ret = 0;
       goto end;
-    }
-    else{
-      syslog(LOG_INFO, "Program locked successfully");
     }
 
 
@@ -88,19 +85,16 @@ int main(int argc, char *argv[])
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    int rc = uci_read_topics(topics, &tCount,100);
+    int rc = uci_load_topics(topics, &tCount,100);
 
     if (rc == 0){
-    syslog(LOG_DEBUG, "Successfully readed topics from uci");
-    }
-    else{
+        syslog(LOG_DEBUG, "Successfully readed topics from uci");
+    } else {
         ret = 1;
         goto end;
     }
 
-    syslog(LOG_DEBUG, "MQTT SERVICE STARTED");
     mqttService(arguments, topics, tCount, &interrupt);
-    syslog(LOG_DEBUG, "MQTT SERVICE ENDED");
 
 end:
     closelog();

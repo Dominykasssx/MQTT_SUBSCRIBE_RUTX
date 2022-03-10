@@ -1,6 +1,6 @@
 struct arguments
 {
-    char *brokerIp, *username, *password;
+    char *brokerIp, *username, *password, *certificate;
     int brokerPort, use_tls;
 };
 

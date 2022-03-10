@@ -76,7 +76,7 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 		fprintf(stderr, "Error: Out of memory.\n");
 		return 1;
 	}
-
+	fprintf(stdout, "Cert %s \n", args.certificate);
 	/* Configure callbacks. */
 	mosquitto_connect_callback_set(mosq, on_connect);
 	mosquitto_message_callback_set(mosq, on_message);

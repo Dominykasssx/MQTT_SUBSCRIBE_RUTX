@@ -1,1 +1,1 @@
-int uci_read_topics(struct topic *topics, int *tCount, int maxTopics);
+int uci_load_topics(struct topic *topics, int *tCount, int maxTopics);
