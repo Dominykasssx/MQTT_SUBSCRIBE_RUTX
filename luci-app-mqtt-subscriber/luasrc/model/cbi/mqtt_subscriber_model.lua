@@ -1,10 +1,9 @@
 map = Map("mqtt_subscriber")
 
-section = map:section(NamedSection, "config", "mqtt_subscriber", "MQTT subscriber configuration")
+section = map:section(NamedSection, "general", "mqtt_subscriber", "MQTT subscriber configuration")
 
 flag = section:option(Flag, "enable", "Enable", "Enable program")
 
-use_tls = section:option( Flag, "use_tls", "Enable TLS", "Enable TLS")
 brokerip = section:option( Value, "brokerIp", "Broker IP address")
 brokerPort = section:option( Value, "brokerPort", "Broker port")
 username = section:option( Value, "username", "Username")
@@ -14,6 +13,20 @@ username.datatype = "string";
 password.password = true;
 brokerPort.datatype = "port";
 brokerip.datatype = "host";
+
+
+
+
+FileUpload.size = "262144"
+FileUpload.sizetext = translate("Selected file is too large, max 256 KiB")
+FileUpload.sizetextempty = translate("Selected file is empty")
+FileUpload.unsafeupload = true
+
+use_tls = section:option(Flag, "use_tls", "Enable TLS", "Enable TLS")
+
+tls_certfile = section:option(FileUpload, "cert_file", translate("Certificate file"), "")
+tls_certfile:depends({use_tls = "1"})
+
 
 
 return map
