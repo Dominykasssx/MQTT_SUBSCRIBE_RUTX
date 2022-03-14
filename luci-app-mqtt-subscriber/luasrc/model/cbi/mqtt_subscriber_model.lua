@@ -16,17 +16,14 @@ brokerip.datatype = "host";
 
 
 
-
-FileUpload.size = "262144"
-FileUpload.sizetext = translate("Selected file is too large, max 256 KiB")
+FileUpload.size = "102401"
+FileUpload.sizetext = translate("Selected file is too large, max 100 Kb")
 FileUpload.sizetextempty = translate("Selected file is empty")
 FileUpload.unsafeupload = true
 
 use_tls = section:option(Flag, "use_tls", "Enable TLS", "Enable TLS")
 
-tls_certfile = section:option(FileUpload, "cert_file", translate("Certificate file"), "")
+tls_certfile = section:option(FileUpload, "cert_path", translate("Certificate file"), "")
 tls_certfile:depends({use_tls = "1"})
-
-
 
 return map
