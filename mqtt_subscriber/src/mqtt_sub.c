@@ -42,23 +42,24 @@ void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_messag
 {
  	int rc1  = saveLog(msg->topic, (char *)msg->payload);
 	if(rc1 == 1){
-    printf("Message was not logged\n");
+    	printf("Message was not logged\n");
     }
     else{
-        printf("Message logged\n");
+    	printf("Message logged\n");
     }
 	fprintf(stdout, "From topic |%s| got message: |%s| qos: |%d|\n", msg->topic, (char *)msg->payload, msg->qos);
 }
 
 int mqttService(struct arguments args, struct topic *topics, int tCount, int *interrupt)
 {
+	int ret = 0;
 	int rc = openDatabase("Mqtt_subscriber");
     if (rc == 0){
     printf("OPENED DATABASE\n");
     }
     else{
     printf("ERROR OPENING DATABASE\n");
-    return 1;
+    ret = 1;
     }
 
 	struct mosquitto *mosq;
@@ -76,7 +77,21 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 		fprintf(stderr, "Error: Out of memory.\n");
 		return 1;
 	}
-	fprintf(stdout, "Cert %s \n", args.certificate);
+	if (strlen(args.certificate) != 0){
+		rc = mosquitto_tls_set(mosq, args.certificate, NULL, NULL, NULL, NULL);
+		if (rc != 0){
+			fprintf(stdout, "Failed to set TLS\n");
+			ret = 1;
+		}
+		else{
+			fprintf(stdout, "TLS set successfully\n");
+		}
+
+	}
+	else{
+		fprintf(stdout, "No certificated found");
+	}
+
 	/* Configure callbacks. */
 	mosquitto_connect_callback_set(mosq, on_connect);
 	mosquitto_message_callback_set(mosq, on_message);
@@ -85,19 +100,17 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
         rc = mosquitto_username_pw_set(mosq, args.username, args.password);
         if (rc != MOSQ_ERR_SUCCESS) {
             fprintf(stderr, "Could not set username and password\n");
-            return 1;
+            ret = 1;
         }
 		else{
-			fprintf(stderr, "Successfully set username and password\n");
+			fprintf(stdout, "Successfully set username and password\n");
 		}
     }
-
-
 	rc = mosquitto_connect(mosq, args.brokerIp, args.brokerPort, 60);
 	if(rc != MOSQ_ERR_SUCCESS){
 		mosquitto_destroy(mosq);
 		fprintf(stderr, "Error: %s\n", mosquitto_strerror(rc));
-		return 1;
+		ret = 1;
 	}
 
 	subscribe(mosq, topics, tCount);
@@ -112,14 +125,14 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 		syslog(LOG_INFO, "MQTT connection lost");
 		 rc =closeDatabase();
     	if (rc == 0){
-    	printf("CLOSED DATABASE\n");
+    	fprintf(stdout, "CLOSED DATABASE\n");
     	}
     	else{
-    	printf("ERROR CLOSING DATABASE\n");
-    	return 1;
+    	fprintf(stderr, "ERROR CLOSING DATABASE\n");
+    	ret = 1;
     }
 	}
 
 	mosquitto_lib_cleanup();
-	return 0;
+	return ret;
 }

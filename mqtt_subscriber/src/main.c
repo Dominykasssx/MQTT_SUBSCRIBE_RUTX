@@ -13,7 +13,9 @@
 #include "mqtt_sub.h"
 #include "topics_load.h"
 #include "logger.h"
+#include "events.h"
 
+#define maxTopics 300
 #define LOCKFILE "/var/lock/mqtt_subscriber.lock"
 
 int interrupt = 0;
@@ -22,7 +24,7 @@ char *progname = "main";
 
 int isLocked(int *fd)
 {
-    syslog(LOG_INFO, "Trying to lock program");
+    syslog(LOG_INFO, "Locking program");
     *fd = open(LOCKFILE, O_RDWR|O_CREAT);
     if (*fd < 0) {
         syslog(LOG_ERR, "can't open %s: %s", LOCKFILE, strerror(errno));
@@ -36,7 +38,7 @@ int isLocked(int *fd)
 }
 void unlock(int *fd)
 {
-  syslog(LOG_INFO, "Unlocking");
+  syslog(LOG_INFO, "Unlocking program");
     if (flock(*fd, LOCK_UN) == -1){
         exit(1);
     }
@@ -68,7 +70,7 @@ int main(int argc, char *argv[])
     int rrc = isLocked(&fd);
 
     if (rrc != 0){
-      syslog(LOG_ERR, "Program is launched from another daemon");
+      syslog(LOG_ERR, "Program is already running from another daemon");
       ret = 0;
       goto end;
     }
@@ -78,21 +80,22 @@ int main(int argc, char *argv[])
     signal(SIGTERM, sigHandler);
 
     struct arguments arguments;
-    struct topic topics[100];
+    struct topic topics[maxTopics];
     int tCount = -1;
     
 	arguments_init(&arguments);
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    int rc = uci_load_topics(topics, &tCount,100);
+    int rc = uci_load_topics(topics, &tCount,maxTopics);
 
     if (rc == 0){
-        syslog(LOG_DEBUG, "Successfully readed topics from uci");
+        syslog(LOG_INFO, "Topics readed successfully\n");
     } else {
         ret = 1;
         goto end;
     }
+    rc = sendEmail();
 
     mqttService(arguments, topics, tCount, &interrupt);
 
