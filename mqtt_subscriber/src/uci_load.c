@@ -114,3 +114,120 @@ int uci_load_topics(struct topic *topics, int *tCount, int maxTopics)
     
     return rc;
 }
+
+int uci_load_events(struct event *events, int *tCount, int maxEvents)
+{
+    int rc = 0;
+    int count = 0;
+
+    char buffer[255];
+
+    for (int i = 0; i < maxEvents; i++) {
+        char* topic;
+        char* name;
+        char* data_type;
+        char* value;
+        char* operator;
+        char* sender;
+        char* receiver;
+        //Reading topic
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@event", i, "topic");
+        rc = uci_get_option(buffer, &topic);
+        if (rc == 1) { 
+            rc = 0;
+            break;
+        }
+        else if (rc) {
+            fprintf(stderr, "Error while setting uci events\n");
+            rc = 1;
+            break;
+        }
+        //Reading name
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@event", i, "name");
+        rc = uci_get_option(buffer, &name);
+        if (rc == 1) { 
+            rc = 0;
+            break;
+        }
+        else if (rc) {
+            fprintf(stderr, "Error while setting uci events\n");
+            rc = 1;
+            break;
+        }
+        //Reading type
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@event", i, "data_type");
+        rc = uci_get_option(buffer, &data_type);
+        if (rc == 1) { 
+            rc = 0;
+            break;
+        }
+        else if (rc) {
+            fprintf(stderr, "Error while setting uci events\n");
+            rc = 1;
+            break;
+        }
+        //Reading value
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@event", i, "value");
+        rc = uci_get_option(buffer, &value);
+        if (rc == 1) { 
+            rc = 0;
+            break;
+        }
+        else if (rc) {
+            fprintf(stderr, "Error while setting uci events\n");
+            rc = 1;
+            break;
+        }
+        //Reading compare operator
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@event", i, "operator");
+        rc = uci_get_option(buffer, &operator);
+        if (rc == 1) { 
+            rc = 0;
+            break;
+        }
+        else if (rc) {
+            fprintf(stderr, "Error while setting uci events\n");
+            rc = 1;
+            break;
+        }
+        //Reading from email
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@event", i, "sender_conf");
+        rc = uci_get_option(buffer, &sender);
+        if (rc == 1) { 
+            rc = 0;
+            break;
+        }
+        else if (rc) {
+            fprintf(stderr, "Error while setting uci events\n");
+            rc = 1;
+            break;
+        }
+        //Reading to email
+        snprintf(buffer, 255, "%s[%d].%s", "mqtt_subscriber.@event", i, "receiver_mail");
+        rc = uci_get_option(buffer, &receiver);
+        if (rc == 1) { 
+            rc = 0;
+            break;
+        }
+        else if (rc) {
+            fprintf(stderr, "Error while setting uci events\n");
+            rc = 1;
+            break;
+        }
+        
+        events[count].topic = topic;
+        events[count].name = name;
+        events[count].type = data_type;
+        events[count].compare = atoi(operator);
+        events[count].value = value;
+        events[count].from_email = sender;
+        events[count].to_email = receiver;
+
+
+        count++;
+    }
+
+    *tCount = count;
+    
+    return rc;
+}

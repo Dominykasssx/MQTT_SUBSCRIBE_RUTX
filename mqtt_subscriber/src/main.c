@@ -11,11 +11,11 @@
 #include <sys/file.h>
 #include "arguments_parse.h"
 #include "mqtt_sub.h"
-#include "topics_load.h"
+#include "uci_load.h"
 #include "logger.h"
-#include "events.h"
+#include "mail.h"
 
-#define maxTopics 300
+#define maxArray 300
 #define LOCKFILE "/var/lock/mqtt_subscriber.lock"
 
 int interrupt = 0;
@@ -58,7 +58,6 @@ void sigHandler(int signo)
     interrupt = 1;
 }
 
-
 static struct argp argp = {options, parse_opt, args_doc, doc};
 
 int main(int argc, char *argv[])
@@ -80,14 +79,15 @@ int main(int argc, char *argv[])
     signal(SIGTERM, sigHandler);
 
     struct arguments arguments;
-    struct topic topics[maxTopics];
+    struct topic topics[maxArray];
+    struct event events[maxArray];
     int tCount = -1;
     
 	arguments_init(&arguments);
 
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    int rc = uci_load_topics(topics, &tCount,maxTopics);
+    int rc = uci_load_topics(topics, &tCount, maxArray);
 
     if (rc == 0){
         syslog(LOG_INFO, "Topics readed successfully\n");
@@ -95,7 +95,19 @@ int main(int argc, char *argv[])
         ret = 1;
         goto end;
     }
-    rc = sendEmail();
+
+
+
+    char *sender = "rutx10.sender@gmail.com";
+    char *password = "dominykas1";
+    char *domain = "smtp.gmail.com";
+    char *sendTo = "b.dominykas@gmail.com";
+    char *payload_text =  "Some event happened\r\n";
+
+
+    //rc = send_mail(domain, sender, password, sendTo);
+
+
 
     mqttService(arguments, topics, tCount, &interrupt);
 

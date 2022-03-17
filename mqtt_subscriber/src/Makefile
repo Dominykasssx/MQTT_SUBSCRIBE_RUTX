@@ -1,5 +1,5 @@
 BIN:=mqtt_subscriber
-OBJS := arguments_parse.o main.o mqtt_sub.o topics_load.o logger.o
+OBJS := arguments_parse.o main.o mqtt_sub.o uci_load.o logger.o events.o mail.o
 LDFLAGS:=-lubox -lmosquitto -largp  -luci -lsqlite3 -lcurl
 
 .PHONY: all clean

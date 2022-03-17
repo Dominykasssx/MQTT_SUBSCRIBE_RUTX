@@ -1,0 +1,1 @@
+int send_mail(char *smtp, char *fromEmail, char *fromPass, char *toEmail, char *payload);

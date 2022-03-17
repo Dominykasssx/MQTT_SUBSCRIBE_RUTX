@@ -1,0 +1,1 @@
+int events_handler(char *topic, char *payload);

@@ -6,7 +6,7 @@
 #include "struct.h"
 #include <syslog.h>
 #include "logger.h"
-
+#include "events.h"
 
 /* Callback called when the client receives a CONNACK message from the broker. */
 void on_connect(struct mosquitto *mosq, void *obj, int reason_code)
@@ -48,6 +48,7 @@ void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_messag
     	printf("Message logged\n");
     }
 	fprintf(stdout, "From topic |%s| got message: |%s| qos: |%d|\n", msg->topic, (char *)msg->payload, msg->qos);
+	events_handler(msg->topic, msg->payload);
 }
 
 int mqttService(struct arguments args, struct topic *topics, int tCount, int *interrupt)
@@ -77,10 +78,10 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 		fprintf(stderr, "Error: Out of memory.\n");
 		return 1;
 	}
-	if (strlen(args.certificate) != 0){
+	if (strlen(args.certificate) != 0 || args.use_tls == 1){
 		rc = mosquitto_tls_set(mosq, args.certificate, NULL, NULL, NULL, NULL);
 		if (rc != 0){
-			fprintf(stdout, "Failed to set TLS\n");
+			fprintf(stdout, "TLS not used\n");
 			ret = 1;
 		}
 		else{
@@ -89,7 +90,7 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 
 	}
 	else{
-		fprintf(stdout, "No certificated found");
+		fprintf(stdout, "TLS turned off / wrong certificate");
 	}
 
 	/* Configure callbacks. */
@@ -133,6 +134,9 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
     }
 	}
 
+	
 	mosquitto_lib_cleanup();
 	return ret;
+
+
 }
