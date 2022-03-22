@@ -15,8 +15,11 @@ struct event
     char *topic;
     char *name;
     char *type;
-    int compare;
+    char *compare;
     char *value;
     char *from_email;
     char *to_email;
+    char *smtp;
+    char *port;
+    char *pass;
 };

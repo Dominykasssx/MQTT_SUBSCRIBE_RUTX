@@ -44,14 +44,13 @@ int send_mail(char *smtp, char *fromEmail, char *fromPass, char *toEmail, char *
   curl = curl_easy_init();
   if(curl) {
     /* Set username and password */
-    curl_easy_setopt(curl, CURLOPT_USERNAME, "rutx10.sender@gmail.com");
-    curl_easy_setopt(curl, CURLOPT_PASSWORD, "dominykas1");
- 
+    curl_easy_setopt(curl, CURLOPT_USERNAME, fromEmail);
+    curl_easy_setopt(curl, CURLOPT_PASSWORD, fromPass);
     /* This is the URL for your mailserver. Note the use of port 587 here,
      * instead of the normal SMTP port (25). Port 587 is commonly used for
      * secure mail submission (see RFC4403), but you should use whatever
      * matches your server configuration. */
-    curl_easy_setopt(curl, CURLOPT_URL, "smtps://smtp.gmail.com:465");
+    curl_easy_setopt(curl, CURLOPT_URL, smtp);
  
     /* In this example, we will start with a plain text connection, and upgrade
      * to Transport Layer Security (TLS) using the STARTTLS command. Be careful

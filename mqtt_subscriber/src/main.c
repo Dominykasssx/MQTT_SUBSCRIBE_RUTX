@@ -96,19 +96,6 @@ int main(int argc, char *argv[])
         goto end;
     }
 
-
-
-    char *sender = "rutx10.sender@gmail.com";
-    char *password = "dominykas1";
-    char *domain = "smtp.gmail.com";
-    char *sendTo = "b.dominykas@gmail.com";
-    char *payload_text =  "Some event happened\r\n";
-
-
-    //rc = send_mail(domain, sender, password, sendTo);
-
-
-
     mqttService(arguments, topics, tCount, &interrupt);
 
 end:

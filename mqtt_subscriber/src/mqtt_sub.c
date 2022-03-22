@@ -8,6 +8,7 @@
 #include "logger.h"
 #include "events.h"
 
+
 /* Callback called when the client receives a CONNACK message from the broker. */
 void on_connect(struct mosquitto *mosq, void *obj, int reason_code)
 {
@@ -40,7 +41,9 @@ static int subscribe(struct mosquitto *mosq, struct topic *topics, int topics_co
 /* Callback called when the client receives a message. */
 void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_message *msg)
 {
- 	int rc1  = saveLog(msg->topic, (char *)msg->payload);
+
+	int rc1  = saveLog(msg->topic, (char *)msg->payload);
+
 	if(rc1 == 1){
     	printf("Message was not logged\n");
     }
@@ -87,7 +90,6 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 		else{
 			fprintf(stdout, "TLS set successfully\n");
 		}
-
 	}
 	else{
 		fprintf(stdout, "TLS turned off / wrong certificate");
@@ -132,9 +134,7 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
     	fprintf(stderr, "ERROR CLOSING DATABASE\n");
     	ret = 1;
     }
-	}
-
-	
+	}	
 	mosquitto_lib_cleanup();
 	return ret;
 
