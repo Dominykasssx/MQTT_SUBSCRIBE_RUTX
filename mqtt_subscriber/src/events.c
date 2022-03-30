@@ -6,24 +6,15 @@
 #include "struct.h"
 #include <json-c/json.h>
 #include "events.h"
+#include "uci_load.h"
+#include <time.h>
 
-int event_init(struct event *events, int *count)
-{
-  int rc = uci_load_events(&events, &count, 300);
-
-  if (rc == 0){
-    syslog(LOG_INFO, "Events readed successfully\n");
-    return 0;
-  }
-  else{
-    return 1;
-  }
-}
 int dataTypeConvert(int typeNumber, char *typeChar)
 {
   int res = 0;
 
-  switch (typeNumber){
+  switch (typeNumber)
+  {
   case 0:
     strcpy(typeChar, "String");
     break;
@@ -41,7 +32,8 @@ int compareTypeConvert(int typeNumber, char *typeChar)
 {
   int res = 0;
 
-  switch (typeNumber){
+  switch (typeNumber)
+  {
   case 0:
     strcpy(typeChar, "==");
     break;
@@ -68,99 +60,127 @@ int compareTypeConvert(int typeNumber, char *typeChar)
 
   return res;
 }
-
-int events_handler(char *topic, char *payload)
+void getTime(char *buffer)
 {
+    time_t timer;
+    struct tm* tm_info;
+    timer = time(NULL);
+    tm_info = localtime(&timer);
 
-  struct event events[300];
-  int tCount = -1;
+    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+}
 
-  int rc = uci_load_events(events, &tCount, 300);
-  if (rc != 0){
-    syslog(LOG_INFO, "Events readed unsuccessfully\n");
-    return 1;
-  }
+void formEmail(struct topic *topic, struct event *event, char *reValue, char *payload_text)
+{
+  char valueChar[20];
+  char operatorChar[20];
+  char time[26];
+  dataTypeConvert(atoi(event->type), valueChar);
+  compareTypeConvert(atoi(event->compare), operatorChar);
+  getTime(&time);
 
+  sprintf(payload_text, "Subject: %s\r\n\r\n"
+                        "MQTT topics: %s\n"
+                        "Value type: %s\n" 
+                        "Compare: %s\n"
+                        "Expected value: %s\n"
+                        "Received value: %s\n"
+                        "Email: %s\n"
+                        "Time: %s", "Event was triggered", topic->topic, valueChar, 
+                        operatorChar, event->value, reValue, event->to_email, time);
+
+  saveEmail(payload_text, time);
+
+}
+
+int events_handler(struct topic *topics, char *payload, char *topic)
+{
   json_object *jobj = json_tokener_parse(payload);
   json_object *tmp;
 
-  for (int i = 0; i < tCount; i++){
-    //If topic is found in events
-    if (strcmp(topic, events[i].topic) == 0){
-      int flag = -1;
-      char *sender = events[i].from_email;
-      char *password = events[i].pass;
-      char *domain = events[i].smtp;
-      char *port = events[i].port;
-      char *sendTo = events[i].to_email;
-      char payload_text[500];
-      char details[250];
-      char domainAndPort[100];
-      sprintf(domainAndPort, "%s:%s", domain, port);
-      char valueChar[20];
-      dataTypeConvert(atoi(events[i].type), &valueChar);
-      char operatorChar[20];
-      compareTypeConvert(atoi(events[i].compare), &operatorChar);
-      int rc = -1;
+  int flag = -1;
+  char payload_text[500];
+  int topicFoundFlag = -1;
 
-      if (json_object_object_get_ex(jobj, events[i].name, &tmp)){
-        sprintf(details, "MQTT Topic: %s\n Value type: %s\n Compare: %s\n Expected value: %s\n Received value: %s\n Email: %s\n",
-                events[i].topic, valueChar, operatorChar, events[i].value, json_object_get_string(tmp), events[i].to_email);
+  int rc = -1;
+  while (topics != NULL)
+  {
+    if (strcmp(topics->topic, topic) == 0)
+    {
+      struct event *tmpEvent = topics->event;
+      while (tmpEvent != NULL)
+      {
+        if (json_object_object_get_ex(jobj, &tmpEvent->name, &tmp))
+        {
+          if (strcmp(tmpEvent->type, "0") == 0)
+          {
+            if (strcmp(json_object_get_string(tmp), tmpEvent->value) == 0) {
 
-        sprintf(payload_text, "Subject: %s\r\n\r\n %s\r\n", "Event was triggered", &details);
+              char domainAndPort[100];
+              sprintf(domainAndPort, "%s:%s", tmpEvent->smtp, tmpEvent->port);
 
-        // If value is string then use strcmp
-        if (strcmp(events[i].type, "0") == 0){
-          syslog(LOG_INFO, "Event found\n");
-          if (strcmp(json_object_get_string(tmp), events[i].value) == 0){
-            syslog(LOG_INFO, "Event good\n");
+              
+              formEmail(topics, tmpEvent, json_object_get_string(tmp), &payload_text);
+              rc = send_mail(domainAndPort, tmpEvent->from_email, tmpEvent->pass, tmpEvent->to_email, payload_text);
+            }
+          }
+          else if (strcmp(tmpEvent->type, "1") == 0)
+          {
+            int compare = atoi(tmpEvent->compare);
 
-            rc = send_mail(domainAndPort, sender, password, sendTo, payload_text);
+            if (compare == EQUAL) {
+              if (atoi(tmpEvent->value) == atoi(json_object_get_string(tmp)))
+              {
+                flag = 0;
+              }
+            }
+            else if (compare == LESS) {
+              if (atoi(json_object_get_string(tmp)) < atoi(tmpEvent->value))
+              {
+                flag = 0;
+              }
+            }
+            else if (compare == MORE) {
+              if (atoi(json_object_get_string(tmp)) > atoi(tmpEvent->value))
+              {
+                flag = 0;
+              }
+            }
+            else if (compare == NOT_EQUAL) {
+              if (atoi(json_object_get_string(tmp)) != atoi(tmpEvent->value))
+              {
+                flag = 0;
+              }
+            }
+            else if (compare == EQUAL_OR_MORE) {
+              if (atoi(json_object_get_string(tmp)) >= atoi(tmpEvent->value))
+              {
+                flag = 0;
+              }
+            }
+            else if (compare == EQUAL_OR_LESS) {
+              if (atoi(json_object_get_string(tmp)) <= atoi(tmpEvent->value))
+              {
+                flag = 0;
+              }
+            }
+            else
+            {
+              flag = -1;
+            }
+            if (flag != -1) {
+              char domainAndPort[100];
+              sprintf(domainAndPort, "%s:%s", tmpEvent->smtp, tmpEvent->port);
+              formEmail(topics, tmpEvent, json_object_get_string(tmp), &payload_text);
+              rc = send_mail(domainAndPort, tmpEvent->from_email, tmpEvent->pass, tmpEvent->to_email, payload_text);
+              flag = -1;
+            }
           }
         }
-        // If value is number use simple compare
-        else if (strcmp(events[i].type, "1") == 0){
-          int compare = atoi(events[i].compare);
-    
-          if (compare == EQUAL){
-            if (atoi(events[i].value) == atoi(json_object_get_string(tmp))){
-              flag = 0;
-            }
-          }
-          else if (compare == LESS){
-            if (atoi(json_object_get_string(tmp)) < atoi(events[i].value)){
-              flag = 0;
-            }
-          }
-          else if (compare == MORE){
-            if (atoi(json_object_get_string(tmp)) > atoi(events[i].value)){
-              flag = 0;
-            }
-          }
-          else if (compare == NOT_EQUAL){
-            if (atoi(json_object_get_string(tmp)) != atoi(events[i].value)){
-              flag = 0;
-            }
-          }
-          else if (compare == EQUAL_OR_MORE){
-            if (atoi(json_object_get_string(tmp)) >= atoi(events[i].value)){
-              flag = 0;
-            }
-          }
-          else if (compare == EQUAL_OR_LESS){
-            if (atoi(json_object_get_string(tmp)) <= atoi(events[i].value)){
-              flag = 0;
-            }
-          }
-          else{
-            flag = -1;
-          }
-          if (flag != -1){
-            rc = send_mail(domainAndPort, sender, password, sendTo, payload_text);
-          }
-        }
+        tmpEvent = tmpEvent->next;
       }
     }
+    topics = topics->next;
   }
   return 0;
 }

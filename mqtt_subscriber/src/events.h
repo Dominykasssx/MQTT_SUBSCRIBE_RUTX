@@ -5,4 +5,4 @@
 #define EQUAL_OR_MORE 4
 #define EQUAL_OR_LESS 5
 
-int events_handler(char *topic, char *payload);
+int events_handler(struct topic *topics, char *payload, char *topic);

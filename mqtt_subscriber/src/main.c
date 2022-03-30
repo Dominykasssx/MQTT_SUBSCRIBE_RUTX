@@ -15,7 +15,7 @@
 #include "logger.h"
 #include "mail.h"
 
-#define maxArray 300
+#define maxList 300
 #define LOCKFILE "/var/lock/mqtt_subscriber.lock"
 
 int interrupt = 0;
@@ -74,29 +74,24 @@ int main(int argc, char *argv[])
       goto end;
     }
 
-
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
 
     struct arguments arguments;
-    struct topic topics[maxArray];
-    struct event events[maxArray];
-    int tCount = -1;
+    struct topic *list = NULL;
     
 	arguments_init(&arguments);
-
+    
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    int rc = uci_load_topics(topics, &tCount, maxArray);
+    printf("Started to read topics and events\n");
 
-    if (rc == 0){
-        syslog(LOG_INFO, "Topics readed successfully\n");
-    } else {
-        ret = 1;
-        goto end;
-    }
+    uci_load_topics(maxList, &list);
+    uci_load_events(maxList, &list);
+    printf("Ended to read topics sand events\n");
+    //printTopics(list);
 
-    mqttService(arguments, topics, tCount, &interrupt);
+    mqttService(arguments, list, &interrupt);
 
 end:
     closelog();

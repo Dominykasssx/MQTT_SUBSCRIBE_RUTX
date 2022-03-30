@@ -4,11 +4,12 @@
 
 void arguments_init(struct arguments *arguments)
 {
-    arguments->use_tls = "";
+    arguments->use_tls = 0;
     arguments->brokerIp = "";
-    arguments->brokerPort = "";
+    arguments->brokerPort = 0;
     arguments->username = "";
     arguments->password = "";
+    arguments->certificate = "";
 }
 
 error_t parse_opt (int key, char *arg, struct argp_state *state)

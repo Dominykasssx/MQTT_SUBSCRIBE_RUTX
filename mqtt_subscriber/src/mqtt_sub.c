@@ -8,8 +8,8 @@
 #include "logger.h"
 #include "events.h"
 
+struct topic *topic_list;
 
-/* Callback called when the client receives a CONNACK message from the broker. */
 void on_connect(struct mosquitto *mosq, void *obj, int reason_code)
 {
 	if (reason_code == 0){
@@ -20,28 +20,36 @@ void on_connect(struct mosquitto *mosq, void *obj, int reason_code)
 	}
 }
 
-/* Callback called when the broker sends a SUBACK in response to a SUBSCRIBE. */
-static int subscribe(struct mosquitto *mosq, struct topic *topics, int topics_count)
+static int subscribe(struct mosquitto *mosq, struct topic *topics)
 {
+	int flag = 1;
     int rc = 0;
-    for (int i = 0; i < topics_count; i++) {
-        
-        rc = mosquitto_subscribe(mosq, NULL, topics[i].topic, topics[i].qos);
-        if (rc) {
-            fprintf(stderr, "Failed to subscribe to topic \"%s\"\n", topics[i]);
+	fprintf(stderr, "%s \n", topics->topic);
+    while (topics != NULL){
+		char *pTopic = topics->topic;
+        if(strcmp(topics->topic,"#") != 0){
+        rc = mosquitto_subscribe(mosq, NULL, topics->topic, 1);
+		flag = 0;
+		}
+		else
+		{
+			fprintf(stderr, "Cannot to subscribe to topic \"%s\"\n", topics->topic);
+		}
+
+        if (rc && flag) {
+            fprintf(stderr, "Failed to subscribe to topic \"%s\"\n", topics->topic);
             break;
         }
 		else{
-			fprintf(stdout, "Topic %s subscribed successfully\n", topics[i]);
+			fprintf(stdout, "Topic %s subscribed successfully\n", topics->topic);
 		}
+		topics = topics->next;
     }
     return rc;
 }
 
-/* Callback called when the client receives a message. */
 void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_message *msg)
 {
-
 	int rc1  = saveLog(msg->topic, (char *)msg->payload);
 
 	if(rc1 == 1){
@@ -51,14 +59,15 @@ void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_messag
     	printf("Message logged\n");
     }
 	fprintf(stdout, "From topic |%s| got message: |%s| qos: |%d|\n", msg->topic, (char *)msg->payload, msg->qos);
-	events_handler(msg->topic, msg->payload);
+	events_handler(topic_list, msg->payload, msg->topic);
 }
 
-int mqttService(struct arguments args, struct topic *topics, int tCount, int *interrupt)
+int mqttService(struct arguments args, struct topic *topics, int *interrupt)
 {
 	int ret = 0;
 	int rc = openDatabase("Mqtt_subscriber");
     if (rc == 0){
+
     printf("OPENED DATABASE\n");
     }
     else{
@@ -68,22 +77,19 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 
 	struct mosquitto *mosq;
 
-	/* Required before calling other mosquitto functions */
 	mosquitto_lib_init();
 
-	/* Create a new client instance.
-	 * id = NULL -> ask the broker to generate a client id for us
-	 * clean session = true -> the broker should remove old sessions when we connect
-	 * obj = NULL -> we aren't passing any of our private data for callbacks
-	 */
 	mosq = mosquitto_new(NULL, true, NULL);
 	if(mosq == NULL){
 		fprintf(stderr, "Error: Out of memory.\n");
 		return 1;
 	}
+
 	if (strlen(args.certificate) != 0 || args.use_tls == 1){
+		printf("4\n");
 		rc = mosquitto_tls_set(mosq, args.certificate, NULL, NULL, NULL, NULL);
 		if (rc != 0){
+			printf("5\n");
 			fprintf(stdout, "TLS not used\n");
 			ret = 1;
 		}
@@ -93,12 +99,13 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 	}
 	else{
 		fprintf(stdout, "TLS turned off / wrong certificate");
+		printf("7\n");
 	}
 
-	/* Configure callbacks. */
+	topic_list = topics;
+
 	mosquitto_connect_callback_set(mosq, on_connect);
 	mosquitto_message_callback_set(mosq, on_message);
-
 	    if (strlen(args.username) != 0 && strlen(args.password) != 0) {
         rc = mosquitto_username_pw_set(mosq, args.username, args.password);
         if (rc != MOSQ_ERR_SUCCESS) {
@@ -115,9 +122,7 @@ int mqttService(struct arguments args, struct topic *topics, int tCount, int *in
 		fprintf(stderr, "Error: %s\n", mosquitto_strerror(rc));
 		ret = 1;
 	}
-
-	subscribe(mosq, topics, tCount);
-
+	subscribe(mosq, topics);
 
 	mosquitto_loop_start(mosq);
 	while (*interrupt == 0) {
