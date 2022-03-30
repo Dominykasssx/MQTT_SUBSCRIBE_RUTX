@@ -61,6 +61,7 @@ struct event* createNodeEvent(char *name, char *data_type, char *operator, char 
     strcpy(event->smtp, smtp);
     strcpy(event->port, port);
     strcpy(event->pass, pass);
+    event->timer = NULL;
     event->next = NULL;
     return event;
 }

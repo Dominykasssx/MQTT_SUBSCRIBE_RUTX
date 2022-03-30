@@ -8,89 +8,51 @@
 #include "events.h"
 #include "uci_load.h"
 #include <time.h>
+#include "converter.h"
 
-int dataTypeConvert(int typeNumber, char *typeChar)
-{
-  int res = 0;
-
-  switch (typeNumber)
-  {
-  case 0:
-    strcpy(typeChar, "String");
-    break;
-  case 1:
-    strcpy(typeChar, "Number");
-    break;
-  default:
-    res = -1;
-  }
-
-  return res;
-}
-
-int compareTypeConvert(int typeNumber, char *typeChar)
-{
-  int res = 0;
-
-  switch (typeNumber)
-  {
-  case 0:
-    strcpy(typeChar, "==");
-    break;
-  case 1:
-    strcpy(typeChar, "<");
-    break;
-  case 2:
-    strcpy(typeChar, ">");
-    break;
-  case 3:
-    strcpy(typeChar, "!=");
-    break;
-  case 4:
-    strcpy(typeChar, ">=");
-    break;
-  case 5:
-    strcpy(typeChar, "<=");
-    break;
-
-  default:
-    strcpy(typeChar, "Not found");
-    res = -1;
-  }
-
-  return res;
-}
-void getTime(char *buffer)
+time_t getTimeNow()
 {
     time_t timer;
     struct tm* tm_info;
     timer = time(NULL);
-    tm_info = localtime(&timer);
-
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    return timer;
 }
 
-void formEmail(struct topic *topic, struct event *event, char *reValue, char *payload_text)
+int formEmail(struct topic *topic, struct event *event, char *reValue, char *payload_text)
 {
   char valueChar[20];
   char operatorChar[20];
-  char time[26];
+  double diff_t = 0;
+  time_t timer;
+  struct tm* tm_info;
+  char buffer[26];
   dataTypeConvert(atoi(event->type), valueChar);
   compareTypeConvert(atoi(event->compare), operatorChar);
-  getTime(&time);
 
-  sprintf(payload_text, "Subject: %s\r\n\r\n"
-                        "MQTT topics: %s\n"
-                        "Value type: %s\n" 
-                        "Compare: %s\n"
-                        "Expected value: %s\n"
-                        "Received value: %s\n"
-                        "Email: %s\n"
-                        "Time: %s", "Event was triggered", topic->topic, valueChar, 
-                        operatorChar, event->value, reValue, event->to_email, time);
+  timer= getTimeNow();
+  tm_info = localtime(&timer);
+  diff_t = difftime(timer, event->timer);
 
-  saveEmail(payload_text, time);
-
+   if (diff_t > 10 || event->timer == NULL){
+     event->timer = timer;
+    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    sprintf(payload_text, "Subject: %s\r\n\r\n"
+                          "MQTT topics: %s\n"
+                          "Value type: %s\n"
+                          "Compare: %s\n"
+                          "Expected value: %s\n"
+                          "Received value: %s\n"
+                          "Email: %s\n"
+                          "Time: %s",
+            "Event was triggered", topic->topic, valueChar,
+            operatorChar, event->value, reValue, event->to_email, buffer);
+    return 0;
+   }
+   else
+   {
+     return 1;
+   }
+  
 }
 
 int events_handler(struct topic *topics, char *payload, char *topic)
@@ -120,8 +82,17 @@ int events_handler(struct topic *topics, char *payload, char *topic)
               sprintf(domainAndPort, "%s:%s", tmpEvent->smtp, tmpEvent->port);
 
               
-              formEmail(topics, tmpEvent, json_object_get_string(tmp), &payload_text);
-              rc = send_mail(domainAndPort, tmpEvent->from_email, tmpEvent->pass, tmpEvent->to_email, payload_text);
+              rc = formEmail(topics, tmpEvent, json_object_get_string(tmp), &payload_text);
+              if (rc == 0)
+              {
+                rc = send_mail(domainAndPort, tmpEvent->from_email, tmpEvent->pass, tmpEvent->to_email, payload_text);
+              }
+              else
+              {
+                printf("Email was not send, because 10seconds has not passed\n");
+              }
+              
+              
             }
           }
           else if (strcmp(tmpEvent->type, "1") == 0)
@@ -171,8 +142,16 @@ int events_handler(struct topic *topics, char *payload, char *topic)
             if (flag != -1) {
               char domainAndPort[100];
               sprintf(domainAndPort, "%s:%s", tmpEvent->smtp, tmpEvent->port);
-              formEmail(topics, tmpEvent, json_object_get_string(tmp), &payload_text);
-              rc = send_mail(domainAndPort, tmpEvent->from_email, tmpEvent->pass, tmpEvent->to_email, payload_text);
+
+              rc = formEmail(topics, tmpEvent, json_object_get_string(tmp), &payload_text);
+              if (rc == 0)
+              {
+                rc = send_mail(domainAndPort, tmpEvent->from_email, tmpEvent->pass, tmpEvent->to_email, payload_text);
+              }
+              else
+              {
+                printf("Email was not send, because 10seconds has not passed\n");
+              }
               flag = -1;
             }
           }

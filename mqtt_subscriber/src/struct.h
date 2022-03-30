@@ -1,3 +1,5 @@
+#include <time.h>
+
 struct arguments
 {
     char *brokerIp, *username, *password, *certificate;
@@ -24,5 +26,6 @@ struct event
     char smtp[50];
     char port[10];
     char pass[200];
+    time_t timer;
     struct event *next;
 };
